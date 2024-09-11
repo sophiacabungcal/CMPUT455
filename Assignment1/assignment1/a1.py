@@ -64,28 +64,65 @@ class CommandInterface:
     #======================================================================================
 
     def game(self, args):
+        # creates a new game on an empty rectangular grid of width n and height m (both in the range from 1 and 20)
+        # only requires the command status as output (1 or -1)
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
     def show(self, args):
+        # shows the current state of the grid, one line per row, followed by the command status
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
     def play(self, args):
+        # Place the digit (0 or 1) at the given (x,y) coordinate
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
     def legal(self, args):
+        # check if this move (in the same format as in play) is legal
+        # check triples & balance constraint
+        # command status always 1
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
     def genmove(self, args):
+        # generates and plays a random move and gives the move as its response
+        # move format is the same as for play: x y digit
+        # If there is no legal move, output resign
+        # command status always 1
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
     def winner(self, args):
+        # checks if the game is over and outputs one of the following game results: 1 2 unfinished
+        # command status always 1
         raise NotImplementedError("This command is not yet implemented.")
         return True
+    
+    #======================================================================================
+    # Aux functions
+    #======================================================================================
+    
+    def get_command_status():
+        # return the command status
+        raise NotImplementedError("This command is not yet implemented.")
+        return True
+
+    def check_triple():
+        # check if the move creates a triple
+        # return True if it does, False otherwise
+        raise NotImplementedError("This command is not yet implemented.")
+        return True
+    
+    def check_balance():
+        # check if the move violates the balance constraint
+        # return True if it does, False otherwise
+        raise NotImplementedError("This command is not yet implemented.")
+        return True
+
+
+
     
     #======================================================================================
     # End of functions requiring implementation
