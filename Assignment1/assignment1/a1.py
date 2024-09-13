@@ -99,7 +99,17 @@ class CommandInterface:
         # check if this move (in the same format as in play) is legal
         # triples & balance constraint
         # command status always 1
-        raise NotImplementedError("This command is not yet implemented.")
+
+        move_x = int(args[0])
+        move_y = int(args[1])
+        move_digit = int(args[2])
+
+        if self.check_balance_violation(move_x, move_y, move_digit) or self.check_triple_violation(move_x, move_y, move_digit):
+            # methods return true if not legal
+            print("no")
+        else:
+            print("yes")
+        
         return True
     
     def genmove(self, args):
@@ -158,10 +168,10 @@ class CommandInterface:
         '''
         return len(args) == 0 and self.board is not None and len(self.board) > 0
 
-    def check_triple(self, x, y, digit):
+    def check_triple_violation(self, x, y, digit):
         '''
         Checks if the move creates a triple (ie. does the move create a row / column of 3 of the same digit)
-        return True if it does, False otherwise
+        return True if it is a violation, False otherwise
         '''
         if self.width < 3 or self.height < 3:
             return False
@@ -188,11 +198,11 @@ class CommandInterface:
 
         return False
     
-    def check_balance(self, x, y, digit):
+    def check_balance_violation(self, x, y, digit):
         '''
         Checks if the move violates the balance constraint 
         (ie. count of both 0s & 1s in each row / column cannot exceed half the length of that row or column (rounded up for odd lengths))
-        return True if it does, False otherwise
+        return True if it is a violation, False otherwise
         '''
         # Calculate the maximum allowed count for 0s and 1s
         max_count_row = (self.width + 1) // 2
