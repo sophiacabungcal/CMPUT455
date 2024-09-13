@@ -92,6 +92,12 @@ class CommandInterface:
     
     def play(self, args):
         # Place the digit (0 or 1) at the given (x,y) coordinate
+
+        move_x = int(args[0])
+        move_y = int(args[1])
+        move_digit = args[2]
+
+
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
@@ -99,10 +105,12 @@ class CommandInterface:
         # check if this move (in the same format as in play) is legal
         # triples & balance constraint
         # command status always 1
+        if not self.is_args_valid(args, self.validate_legal_args):
+            print("no")
 
         move_x = int(args[0])
         move_y = int(args[1])
-        move_digit = int(args[2])
+        move_digit = args[2]
 
         if self.check_balance_violation(move_x, move_y, move_digit) or self.check_triple_violation(move_x, move_y, move_digit):
             # methods return true if not legal
@@ -122,7 +130,13 @@ class CommandInterface:
     
     def winner(self, args):
         # checks if the game is over and outputs one of the following game results: 1 2 unfinished
+        # player who makes final move wins (ie. player with no legal moves left loses)
         # command status always 1
+
+        # if there's more than 1 legal moves left: unfinished
+
+        # if only 1 legal move left, check whose turn it is - whoever's turn it is will be the winner since that will be the last move
+        
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
@@ -167,6 +181,27 @@ class CommandInterface:
         must be no arguments and the board should be instatiated
         '''
         return len(args) == 0 and self.board is not None and len(self.board) > 0
+
+    def validate_legal_args(self, args):
+        '''
+        validates if the arguments for the legal command are valid
+        must have 3 arguments: x y digit
+        x (args[0]) and y (args[1]) must be ints between 1 to 20
+        digit must be either 1 or 0
+        '''
+        if len(args) != 3:
+            return False
+        if not args[0].isdigit() or not args[1].isdigit():
+            return False
+        if args[2] not in ['1', '0']:
+            return False
+        
+        x, y = int(args[0]), int(args[1])
+        if not (1 <= x <= 20 and 1 <= y <= 20):
+            return False
+        
+        return True
+    
 
     def check_triple_violation(self, x, y, digit):
         '''
