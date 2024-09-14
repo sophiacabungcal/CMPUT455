@@ -69,12 +69,13 @@ class CommandInterface:
     def game(self, args):
         # creates a new game on an empty rectangular grid of width n and height m (both in the range from 1 and 20)
         # only requires the command status as output (1 or -1)
-        print(args)  # TODO: for debugging, remove later
         if not self.is_args_valid(args, self.validate_game_args):
             raise ValueError("Invalid arguments for game command")
 
-        self.width = args[0]
-        self.height = args[1]
+        print(args)  # TODO: for debugging, remove later
+
+        self.width = int(args[0])
+        self.height = int(args[1])
         self.board = [['.' for _ in range(self.width)] for _ in range(self.height)]
 
         return True
@@ -91,6 +92,12 @@ class CommandInterface:
     
     def play(self, args):
         # Place the digit (0 or 1) at the given (x,y) coordinate
+
+        move_x = int(args[0])
+        move_y = int(args[1])
+        move_digit = args[2]
+
+
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
@@ -98,7 +105,19 @@ class CommandInterface:
         # check if this move (in the same format as in play) is legal
         # triples & balance constraint
         # command status always 1
-        raise NotImplementedError("This command is not yet implemented.")
+        if not self.is_args_valid(args, self.validate_legal_args):
+            print("no")
+
+        move_x = int(args[0])
+        move_y = int(args[1])
+        move_digit = args[2]
+
+        if self.check_balance_violation(move_x, move_y, move_digit) or self.check_triple_violation(move_x, move_y, move_digit):
+            # methods return true if not legal
+            print("no")
+        else:
+            print("yes")
+        
         return True
     
     def genmove(self, args):
@@ -111,21 +130,40 @@ class CommandInterface:
     
     def winner(self, args):
         # checks if the game is over and outputs one of the following game results: 1 2 unfinished
+        # player who makes final move wins (ie. player with no legal moves left loses)
         # command status always 1
+
+        # if there's more than 1 legal moves left: unfinished
+
+        # if only 1 legal move left, check whose turn it is - whoever's turn it is will be the winner since that will be the last move
+        
         raise NotImplementedError("This command is not yet implemented.")
         return True
     
     #======================================================================================
     # Aux functions
     #======================================================================================
+    def get_element(self, x, y):
+        '''
+        returns the element at the given coordinates
+        '''
+        if x < 0 or x >= self.height or y < 0 or y >= self.width:
+            raise IndexError("Coordinates out of bounds")
+
+        return self.board[x][y]
+    
     def is_args_valid(self, args, validation_func):
-        # check if the arguments are valid
-        # return True if they are, False if not
+        '''
+        checks if the arguments are valid
+        return True if they are, False if not
+        '''
         return validation_func(args)
     
     def validate_game_args(self, args):
-        # validates if the arguments for the game command are valid
-        # must be 2 arguments, both integers, between 1 and 20
+        '''
+        Validates if the arguments for the game command are valid
+        must be 2 arguments, both integers, between 1 and 20
+        '''
         if len(args) != 2:
             return False
         if not args[0].isdigit() or not args[1].isdigit():
@@ -138,22 +176,83 @@ class CommandInterface:
         return True
     
     def validate_show_args(self, args):
-        # validates if the arguments for the show command are valid
-        # must be no arguments and the board should be instatiated
+        '''
+        Validates if the arguments for the show command are valid
+        must be no arguments and the board should be instatiated
+        '''
         return len(args) == 0 and self.board is not None and len(self.board) > 0
 
-    def check_triple(self):
-        # check if the move creates a triple
-        # return True if it does, False otherwise
-        raise NotImplementedError("This command is not yet implemented.")
+    def validate_legal_args(self, args):
+        '''
+        validates if the arguments for the legal command are valid
+        must have 3 arguments: x y digit
+        x (args[0]) and y (args[1]) must be ints between 1 to 20
+        digit must be either 1 or 0
+        '''
+        if len(args) != 3:
+            return False
+        if not args[0].isdigit() or not args[1].isdigit():
+            return False
+        if args[2] not in ['1', '0']:
+            return False
+        
+        x, y = int(args[0]), int(args[1])
+        if not (1 <= x <= 20 and 1 <= y <= 20):
+            return False
+        
         return True
     
-    def check_balance(self):
-        # check if the move violates the balance constraint
-        # return True if it does, False otherwise
-        raise NotImplementedError("This command is not yet implemented.")
-        return True
 
+    def check_triple_violation(self, x, y, digit):
+        '''
+        Checks if the move creates a triple (ie. does the move create a row / column of 3 of the same digit)
+        return True if it is a violation, False otherwise
+        '''
+        if self.width < 3 or self.height < 3:
+            return False
+        
+        if y <= self.width - 3:
+            if self.get_element(x, y + 1) == digit and self.get_element(x, y + 2) == digit:
+                return True
+        if y >= 2:
+            if self.get_element(x, y - 1) == digit and self.get_element(x, y - 2) == digit:
+                return True
+        if 1 <= y <= self.width - 2:
+            if self.get_element(x, y - 1) == digit and self.get_element(x, y + 1) == digit:
+                return True
+
+        if x <= self.height - 3:
+            if self.get_element(x + 1, y) == digit and self.get_element(x + 2, y) == digit:
+                return True
+        if x >= 2:
+            if self.get_element(x - 1, y) == digit and self.get_element(x - 2, y) == digit:
+                return True
+        if 1 <= x <= self.height - 2:
+            if self.get_element(x - 1, y) == digit and self.get_element(x + 1, y) == digit:
+                return True
+
+        return False
+    
+    def check_balance_violation(self, x, y, digit):
+        '''
+        Checks if the move violates the balance constraint 
+        (ie. count of both 0s & 1s in each row / column cannot exceed half the length of that row or column (rounded up for odd lengths))
+        return True if it is a violation, False otherwise
+        '''
+        # Calculate the maximum allowed count for 0s and 1s
+        max_count_row = (self.width + 1) // 2
+        max_count_col = (self.height + 1) // 2
+
+        current_row_digit_count = sum(1 for j in range(self.width) if self.get_element(x, j) == digit)
+        current_col_digit_count = sum(1 for i in range(self.height) if self.get_element(i, y) == digit)
+    
+        current_row_digit_count += 1
+        current_col_digit_count += 1
+
+        if current_row_digit_count > max_count_row or current_col_digit_count > max_count_col:
+            return True
+
+        return False
 
     #======================================================================================
     # End of functions requiring implementation
