@@ -175,7 +175,6 @@ class CommandInterface:
 
         # if only 1 legal move left, check whose turn it is - whoever's turn it is will be the winner since that will be the last move
         pos_moves = []
-        valid_moves = []
         move_count = 0
             
         for row in range(self.height):
@@ -191,18 +190,14 @@ class CommandInterface:
             return True
 
         for move in pos_moves:
-            # breakout early if > 1 left
-            if len(valid_moves) > 1:
-                print('unfinished')
-                return True
-            
             row, col, digit = move
             args_valid = self.is_args_valid((str(col),str(row),digit), self.validate_legal_args)
             triple_violation = self.check_triple_violation(col, row, digit)
             balance_violation = self.check_balance_violation(col, row, digit)
             
             if args_valid[0] and not triple_violation[0] and not balance_violation[0]:
-                valid_moves.append([col, row, digit])
+                print('unfinished')
+                return True
 
         print((move_count + 2) % 2)
                     
