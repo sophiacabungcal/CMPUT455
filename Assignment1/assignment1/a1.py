@@ -3,6 +3,7 @@
 # Full assignment specification here: https://webdocs.cs.ualberta.ca/~mmueller/courses/cmput455/assignments/a1.html
 
 import sys
+import random
 
 class CommandInterface:
     # The following is already defined and does not need modification
@@ -72,8 +73,6 @@ class CommandInterface:
         if not self.is_args_valid(args, self.validate_game_args):
             raise ValueError("Invalid arguments for game command")
 
-        print(args)  # TODO: for debugging, remove later
-
         self.width = int(args[0])
         self.height = int(args[1])
         self.board = [['.' for _ in range(self.width)] for _ in range(self.height)]
@@ -92,27 +91,47 @@ class CommandInterface:
     
     def play(self, args):
         # Place the digit (0 or 1) at the given (x,y) coordinate
-
+        illegal_msg = '= illegal move: '
+        
+        # args check
+        args_valid = self.is_args_valid(args, self.validate_legal_args)
+        if args_valid[0] != True:
+            print(illegal_msg + f'{" ".join(args)} ' + args_valid[1] + '\n')
+            return False
+        
         move_x = int(args[0])
         move_y = int(args[1])
         move_digit = args[2]
-
-
-        raise NotImplementedError("This command is not yet implemented.")
+        
+        # triple check
+        triple_violation = self.check_triple_violation(move_x, move_y, move_digit)
+        if triple_violation[0] != False:
+            print(illegal_msg + f'{" ".join(args)} ' + triple_violation[1] + '\n')
+            return False
+        
+        #  balance check
+        balance_violation = self.check_balance_violation(move_x, move_y, move_digit)
+        if balance_violation[0] != False:
+            print(illegal_msg + f'{" ".join(args)} ' + balance_violation[1] + '\n')
+            return False
+        
+        self.board[move_y][move_x] = move_digit
+        
         return True
     
     def legal(self, args):
         # check if this move (in the same format as in play) is legal
         # triples & balance constraint
         # command status always 1
-        if not self.is_args_valid(args, self.validate_legal_args):
+        if not self.is_args_valid(args, self.validate_legal_args)[0]:
             print("no")
+            return True
 
         move_x = int(args[0])
         move_y = int(args[1])
         move_digit = args[2]
 
-        if self.check_balance_violation(move_x, move_y, move_digit) or self.check_triple_violation(move_x, move_y, move_digit):
+        if self.check_balance_violation(move_x, move_y, move_digit)[0] or self.check_triple_violation(move_x, move_y, move_digit)[0]:
             # methods return true if not legal
             print("no")
         else:
@@ -125,7 +144,26 @@ class CommandInterface:
         # move format is the same as for play: x y digit
         # If there is no legal move, output resign
         # command status always 1
-        raise NotImplementedError("This command is not yet implemented.")
+        pos_moves = []
+        
+        for digit in ('0','1'):
+            for row in range(self.height):
+                for col in range(self.width):
+                    if self.board[row][col] != '.': continue  # skip occupied
+                    args_valid = self.is_args_valid((str(col),str(row),digit), self.validate_legal_args)
+                    triple_violation = self.check_triple_violation(col, row, digit)
+                    balance_violation = self.check_balance_violation(col, row, digit)
+                    if args_valid[0] and not triple_violation[0] and not balance_violation[0]:
+                        pos_moves.append([col, row, digit])
+                        
+        if not pos_moves:
+            print('resign')
+        else:
+            move = random.choice(pos_moves)
+            gcol, grow, gdigit = move[0], move[1], move[2]
+            self.board[grow][gcol] = gdigit
+            print(f'{gcol} {grow} {gdigit}')
+            
         return True
     
     def winner(self, args):
@@ -136,21 +174,51 @@ class CommandInterface:
         # if there's more than 1 legal moves left: unfinished
 
         # if only 1 legal move left, check whose turn it is - whoever's turn it is will be the winner since that will be the last move
-        
-        raise NotImplementedError("This command is not yet implemented.")
+        pos_moves = []
+        valid_moves = []
+        move_count = 0
+            
+        for row in range(self.height):
+            for col in range(self.width):
+                if self.board[row][col] == '.':
+                    pos_moves.append([row, col, "1"])
+                    pos_moves.append([row, col, "0"])
+                else:
+                    move_count += 1
+                    
+        if not pos_moves: 
+            print((move_count + 1) % 2 + 1)
+            return True
+
+        for move in pos_moves:
+            # breakout early if > 1 left
+            if len(valid_moves) > 1:
+                print('unfinished')
+                return True
+            
+            row, col, digit = move
+            args_valid = self.is_args_valid((str(col),str(row),digit), self.validate_legal_args)
+            triple_violation = self.check_triple_violation(col, row, digit)
+            balance_violation = self.check_balance_violation(col, row, digit)
+            
+            if args_valid[0] and not triple_violation[0] and not balance_violation[0]:
+                valid_moves.append([col, row, digit])
+
+        print((move_count + 2) % 2)
+                    
         return True
     
     #======================================================================================
     # Aux functions
     #======================================================================================
-    def get_element(self, x, y):
+    def get_element(self, y, x):
         '''
         returns the element at the given coordinates
         '''
-        if x < 0 or x >= self.height or y < 0 or y >= self.width:
+        if x < 0 or x >= self.width or y < 0 or y >= self.height:
             raise IndexError("Coordinates out of bounds")
 
-        return self.board[x][y]
+        return self.board[y][x]
     
     def is_args_valid(self, args, validation_func):
         '''
@@ -166,8 +234,8 @@ class CommandInterface:
         '''
         if len(args) != 2:
             return False
-        if not args[0].isdigit() or not args[1].isdigit():
-            return False
+        #if not args[0].isdigit() or not args[1].isdigit():
+        #    return False
         
         width, height = int(args[0]), int(args[1])
         if not (1 <= width <= 20 and 1 <= height <= 20):
@@ -190,17 +258,21 @@ class CommandInterface:
         digit must be either 1 or 0
         '''
         if len(args) != 3:
-            return False
+            return False, 'wrong number of arguments'
         if not args[0].isdigit() or not args[1].isdigit():
-            return False
+            return False, 'wrong coordinate'
         if args[2] not in ['1', '0']:
-            return False
+            return False, 'wrong number'
         
         x, y = int(args[0]), int(args[1])
-        if not (1 <= x <= 20 and 1 <= y <= 20):
-            return False
+        if not (0 <= x < self.width and 0 <= y < self.height):
+            return False, 'wrong coordinate'
+
+        # occupied check
+        if self.board[y][x] != '.':
+            return False, 'occupied'
         
-        return True
+        return True, ''
     
 
     def check_triple_violation(self, x, y, digit):
@@ -208,30 +280,35 @@ class CommandInterface:
         Checks if the move creates a triple (ie. does the move create a row / column of 3 of the same digit)
         return True if it is a violation, False otherwise
         '''
-        if self.width < 3 or self.height < 3:
-            return False
+        three_msg = 'three in a row'
         
-        if y <= self.width - 3:
-            if self.get_element(x, y + 1) == digit and self.get_element(x, y + 2) == digit:
-                return True
-        if y >= 2:
-            if self.get_element(x, y - 1) == digit and self.get_element(x, y - 2) == digit:
-                return True
-        if 1 <= y <= self.width - 2:
-            if self.get_element(x, y - 1) == digit and self.get_element(x, y + 1) == digit:
-                return True
-
-        if x <= self.height - 3:
-            if self.get_element(x + 1, y) == digit and self.get_element(x + 2, y) == digit:
-                return True
+        # If the board is too small, no triple can occur
+        if self.width < 3 and self.height < 3:
+            return False, ''
+        
+        # Horizontal check (row-wise, so y is constant, x changes)
+        if x <= self.width - 3:
+            if self.get_element(y, x + 1) == digit and self.get_element(y, x + 2) == digit:
+                return True, three_msg
         if x >= 2:
-            if self.get_element(x - 1, y) == digit and self.get_element(x - 2, y) == digit:
-                return True
-        if 1 <= x <= self.height - 2:
-            if self.get_element(x - 1, y) == digit and self.get_element(x + 1, y) == digit:
-                return True
+            if self.get_element(y, x - 1) == digit and self.get_element(y, x - 2) == digit:
+                return True, three_msg
+        if 1 <= x <= self.width - 2:
+            if self.get_element(y, x - 1) == digit and self.get_element(y, x + 1) == digit:
+                return True, three_msg
 
-        return False
+        # Vertical check (column-wise, so x is constant, y changes)
+        if y <= self.height - 3:
+            if self.get_element(y + 1, x) == digit and self.get_element(y + 2, x) == digit:
+                return True, three_msg
+        if y >= 2:
+            if self.get_element(y - 1, x) == digit and self.get_element(y - 2, x) == digit:
+                return True, three_msg
+        if 1 <= y <= self.height - 2:
+            if self.get_element(y - 1, x) == digit and self.get_element(y + 1, x) == digit:
+                return True, three_msg
+
+        return False, ''   
     
     def check_balance_violation(self, x, y, digit):
         '''
@@ -240,19 +317,19 @@ class CommandInterface:
         return True if it is a violation, False otherwise
         '''
         # Calculate the maximum allowed count for 0s and 1s
-        max_count_row = (self.width + 1) // 2
-        max_count_col = (self.height + 1) // 2
+        max_count_row = self.width // 2 + (self.width % 2 > 0)
+        max_count_col = self.height // 2 + (self.height % 2 > 0)
 
-        current_row_digit_count = sum(1 for j in range(self.width) if self.get_element(x, j) == digit)
-        current_col_digit_count = sum(1 for i in range(self.height) if self.get_element(i, y) == digit)
+        current_row_digit_count = sum(1 for j in range(self.width) if self.get_element(y, j) == digit)
+        current_col_digit_count = sum(1 for i in range(self.height) if self.get_element(i, x) == digit)
     
         current_row_digit_count += 1
         current_col_digit_count += 1
 
         if current_row_digit_count > max_count_row or current_col_digit_count > max_count_col:
-            return True
+            return True, f'too many {digit}'
 
-        return False
+        return False, ''
 
     #======================================================================================
     # End of functions requiring implementation
