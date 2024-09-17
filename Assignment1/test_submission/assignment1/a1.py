@@ -265,12 +265,13 @@ class CommandInterface:
             return False, 'wrong number of arguments'
         if not args[0].isdigit() or not args[1].isdigit():
             return False, 'wrong coordinate'
-        if args[2] not in ['1', '0']:
-            return False, 'wrong number'
-        
         col_num, row_num = int(args[0]), int(args[1])
         if not (0 <= col_num < self.width and 0 <= row_num < self.height):
             return False, 'wrong coordinate'
+        
+        # correct digit check
+        if args[2] not in ['1', '0']:
+            return False, 'wrong number'
 
         # occupied check
         if self.board[row_num][col_num] != '.':
