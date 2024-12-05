@@ -1,1 +1,3 @@
-This repository includes all of my CMPUT 455 coursework
+# CMPUT301
+
+Repository for all CMPUT455 coursework 
